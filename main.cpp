@@ -1,8 +1,8 @@
-#include<bits/stdc++.h>
-#include<SDL2/SDL.h>
-#include<SDL2/SDL_image.h>
-#include<glm/glm.hpp>
-#include "ray.h"
+#include <bits/stdc++.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <glm/glm.hpp>
+#include "headers/col781.h"
 using vec3 = glm::vec3;
 using point = vec3;
 using color = vec3;
@@ -12,28 +12,16 @@ inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
   return out << v.x << ' ' << v.y << ' ' << v.z;
 }
 
-bool hit_sphere(point &center, float radius, ray &r) {
-  vec3 oc = r.getOrigin() - center;
-  float a = glm::dot(r.getDirection(), r.getDirection());
-  float b = 2.0f * glm::dot(oc, r.getDirection());
-  float c = glm::dot(oc, oc) - radius * radius;
-  float discriminant = b * b - 4 * a * c;
-  return (discriminant > 0);
-}
-
-color ray_color(ray& r) {
-  point center(0, 0, -1);
-  if (hit_sphere(center, 0.5f, r)) {
-    return color(1, 0, 0);
+color ray_color(ray& r, hittable &world) {
+  hit_record rec;
+  if (world.hit(r, 0, infinity, rec)) {
+    return 0.5f * (rec.normal + color(1, 1, 1));
   }
 
-  vec3 unit_direction = (r.getDirection() / (float) r.getDirection().length());
-  float t = 0.5*(unit_direction.y + 1.0);
-  return (1.0f-t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
+  vec3 unit_direction = glm::normalize(r.getDirection());
+  float t = 0.5*(unit_direction.y + 1.0f);
+  return (1.0f-t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
 }
-
-
-
 
 SDL_Surface* framebuffer = NULL;
 SDL_Window* window = NULL;
@@ -49,8 +37,6 @@ void handleEvents() {
   }
 }
 
-
-
 int main() {
 
   // Image Specifications
@@ -58,6 +44,10 @@ int main() {
   const int frameWidth = 640;
   const int frameHeight = static_cast<int>(frameWidth / aspectRatio);
 
+  // World
+  hittable_list world;
+  world.add(make_shared<sphere>(point(0,0,-2), 0.5));
+  world.add(make_shared<sphere>(point(0,-101,-2), 100));
 
   // Camera (will implement this as class later.)
   float viewportHeight = 2.0;
@@ -83,8 +73,6 @@ int main() {
     }
   }
 
-  
-
   // Rendering
   Uint32 *pixels = (Uint32 *) framebuffer->pixels;
 
@@ -93,7 +81,7 @@ int main() {
       auto u = i * 1.0f / (frameWidth - 1);
       auto v = j * 1.0f / (frameHeight - 1);
       ray r(origin, llc + u * horizontal + v * vertical - origin);
-      color pixelColor = 255.99f * ray_color(r);
+      color pixelColor = 255.99f * ray_color(r, world);
       pixels[i + frameWidth * (frameHeight - 1 - j)] = SDL_MapRGB(framebuffer->format, pixelColor.x, pixelColor.y, pixelColor.z);
     }
   }
