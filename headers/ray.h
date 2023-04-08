@@ -2,9 +2,11 @@
 #include<glm/glm.hpp>
 using vec3 = glm::vec3;
 using point = vec3;
-
+using color = vec3;
 class ray {
   public:
+    ray() {}
+    
     ray(const point &_origin, const vec3 &_direction){
       origin = _origin;
       direction = _direction;
