@@ -3,6 +3,7 @@
 #include <SDL2/SDL_image.h>
 #include <glm/glm.hpp>
 #include "headers/col781.h"
+#include <omp.h>
 using namespace std;
 
 inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
@@ -76,11 +77,11 @@ void handleEvents() {
 int main() {
 
   // Image Specifications
-  const float aspectRatio = 16.0f/9;
-  const int frameWidth = 640;
+  const float aspectRatio = 1.0;
+  const int frameWidth = 600;
   const int frameHeight = static_cast<int>(frameWidth / aspectRatio);
   const int samples = 100;
-  const int max_depth = 50;
+  const int max_depth = 20;
 
   // World
   // hittable_list world;
@@ -116,7 +117,7 @@ int main() {
   // hittable_list world;
 
   // auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
-  auto material_center = make_shared<lambertian>(color(0.1, 0.2, 0.5));
+  // auto material_center = make_shared<lambertian>(color(0.1, 0.2, 0.5));
   // auto material_left   = make_shared<dielectric>(1.5);
   // auto material_right  = make_shared<metal>(color(0.8, 0.6, 0.2));
 
@@ -131,17 +132,35 @@ int main() {
   // Test End
 
   // World
-  hittable_list world;
-  auto difflight = make_shared<diffuse_light> (color(4, 4, 4));
-  world.add(make_shared<sphere>(point(0,-1000,0), 1000, material_center));
-  world.add(make_shared<sphere>(point(0,2,0), 2, material_center));
-  world.add(make_shared<sphere>(point(3.0,    5.0, 0),   1, difflight));
-  world.add(make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
+  // hittable_list world;
+  // auto difflight = make_shared<diffuse_light> (color(4, 4, 4));
+  // world.add(make_shared<sphere>(point(0,-1000,0), 1000, material_center));
+  // world.add(make_shared<sphere>(point(0,2,0), 2, material_center));
+  // world.add(make_shared<sphere>(point(3.0,    5.0, 0),   1, difflight));
+  // world.add(make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
 
-  // Camera specifications
-  point lookfrom(26, 3, 6);
-  point lookat(0, 2, 0);
-  float vfov = 20.0f;
+  // // Camera specifications
+  // point lookfrom(26, 3, 6);
+  // point lookat(0, 2, 0);
+  // float vfov = 20.0f;
+  // color background(0, 0, 0);
+  // camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
+
+  // Cornell Box
+  hittable_list world;
+  auto red   = make_shared<lambertian>(color(.65, .05, .05));
+  auto white = make_shared<lambertian>(color(.73, .73, .73));
+  auto green = make_shared<lambertian>(color(.12, .45, .15));
+  auto light = make_shared<diffuse_light>(color(15, 15, 15));
+  world.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+  world.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+  world.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+  world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+  world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+  world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+  point lookfrom(278, 278, -800);
+  point lookat(278, 278, 0);
+  float vfov = 40.0f;
   color background(0, 0, 0);
   camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
 
@@ -165,28 +184,34 @@ int main() {
 
   // Rendering
   Uint32 *pixels = (Uint32 *) framebuffer->pixels;
+  int numt = 8;
 
-  for (int j = 0; j < frameHeight; j += 1) {
-    for (int i = 0; i < frameWidth; i += 1) {
-      color pixelColor(0, 0, 0);
-      for (int s = 0; s < samples; s += 1) {
-        auto u = (i + random_in_zo()) * 1.0f / (frameWidth - 1);
-        auto v = (j + random_in_zo()) * 1.0f / (frameHeight - 1);
-        ray r = cam.get_ray(u, v);
-        pixelColor += ray_color(r, background, world, max_depth);
+  #pragma omp parallel num_threads(numt)
+  {
+    int tid = omp_get_thread_num();
+    for (int j = tid; j < frameHeight; j += numt) {
+      for (int i = 0; i < frameWidth; i += 1) {
+        color pixelColor(0, 0, 0);
+        for (int s = 0; s < samples; s += 1) {
+          auto u = (i + random_in_zo()) * 1.0f / (frameWidth - 1);
+          auto v = (j + random_in_zo()) * 1.0f / (frameHeight - 1);
+          ray r = cam.get_ray(u, v);
+          pixelColor += ray_color(r, background, world, max_depth);
+        }
+        pixelColor /= (1.0f * samples);
+
+        // Gamma Correction
+        pixelColor.r = sqrt(pixelColor.r);
+        pixelColor.g = sqrt(pixelColor.g);
+        pixelColor.b = sqrt(pixelColor.b);
+
+        pixelColor *= 255.99f;
+        pixels[i + frameWidth * (frameHeight - 1 - j)] = SDL_MapRGB(framebuffer->format, pixelColor.x, pixelColor.y, pixelColor.z);
       }
-      pixelColor /= (1.0f * samples);
-
-      // Gamma Correction
-      pixelColor.r = sqrt(pixelColor.r);
-      pixelColor.g = sqrt(pixelColor.g);
-      pixelColor.b = sqrt(pixelColor.b);
-
-      pixelColor *= 255.99f;
-      pixels[i + frameWidth * (frameHeight - 1 - j)] = SDL_MapRGB(framebuffer->format, pixelColor.x, pixelColor.y, pixelColor.z);
     }
   }
 
+  std::cout << "Done tracing!!" << std::endl;
 
   SDL_BlitScaled(framebuffer, NULL, windowSurface, NULL);
   SDL_UpdateWindowSurface(window);
