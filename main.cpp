@@ -89,10 +89,66 @@ hittable_list cornell_box() {
     objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
     objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
     objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
-    objects.add(make_shared<box>(point(130, 0, 65), point(295, 165, 230), white));
-    objects.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));
+    // objects.add(make_shared<box>(point(130, 0, 65), point(295, 165, 230), white));
+    // objects.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));
+
+    // Rotated instead.
+    shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(165, 330, 165), white);
+    box1 = make_shared<rotate_y>(box1, 15);
+    box1 = make_shared<translate>(box1, vec3(265,0,295));
+    objects.add(box1);
+
+    shared_ptr<hittable> box2 = make_shared<box>(point(0,0,0), point(165,165,165), white);
+    box2 = make_shared<rotate_y>(box2, -18);
+    box2 = make_shared<translate>(box2, vec3(130,0,65));
+    objects.add(box2);
 
     return objects;
+}
+
+hittable_list final_scene() {
+  // hittable_list boxes1;
+  hittable_list objects;
+  auto ground = make_shared<lambertian>(color(0.48, 0.83, 0.53));
+  const int boxes_per_side = 20;
+  for (int i = 0; i < boxes_per_side; i++) {
+    for (int j = 0; j < boxes_per_side; j++) {
+      auto w = 100.0;
+      auto x0 = -1000.0 + i*w;
+      auto z0 = -1000.0 + j*w;
+      auto y0 = 0.0;
+      auto x1 = x0 + w;
+      auto y1 = random_float(1,101);
+      auto z1 = z0 + w;
+      objects.add(make_shared<box>(point(x0,y0,z0), point(x1,y1,z1), ground));
+    }
+  }
+
+  auto light = make_shared<diffuse_light>(color(15, 15, 15));
+  objects.add(make_shared<xz_rect>(123, 423, 147, 412, 554, light));
+  objects.add(make_shared<sphere>(point(260, 150, 45), 50, make_shared<dielectric>(1.5)));
+  objects.add(make_shared<sphere>(
+      point(0, 150, 145), 50, make_shared<metal>(color(0.8, 0.8, 0.9), 1)
+  ));
+
+  // have to remove this one
+  objects.add(make_shared<sphere>(point(220,280,300), 80, make_shared<lambertian>(color(0.7, 0.3, 0.3))));
+
+  hittable_list boxes2;
+  auto white = make_shared<lambertian>(color(.73, .73, .73));
+  int ns = 100;
+  for (int j = 0; j < ns; j++) {
+      objects.add(
+        make_shared<translate>(
+          make_shared<rotate_y>(
+            make_shared<sphere>(random_vec3(0, 165), 10, white), 15
+          ), vec3(-100,270,395)
+        )
+      );
+  }
+
+  return objects;
+
 }
 
 int main() {
@@ -196,15 +252,27 @@ int main() {
   // camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
 
   switch (0) {
-    default:
     case 1:
       world = cornell_box();
       aspectRatio = 1.0f;
       frameWidth = 600;
       frameHeight = static_cast<int>(frameWidth / aspectRatio);
-      samples = 100;
+      samples = 200;
       background = color(0, 0, 0);
       lookfrom = point(278, 278, -800);
+      lookat = point(278, 278, 0);
+      vfov = 40.0;
+      break;
+
+    default:
+    case 2:
+      world = final_scene();
+      aspectRatio = 1.0;
+      frameWidth = 800;
+      frameHeight = static_cast<int>(frameWidth / aspectRatio);
+      samples = 500;
+      background = color(0,0,0);
+      lookfrom = point(478, 278, -600);
       lookat = point(278, 278, 0);
       vfov = 40.0;
       break;
@@ -247,9 +315,9 @@ int main() {
         pixelColor /= (1.0f * samples);
 
         // Gamma Correction
-        pixelColor.r = sqrt(pixelColor.r);
-        pixelColor.g = sqrt(pixelColor.g);
-        pixelColor.b = sqrt(pixelColor.b);
+        // pixelColor.r = sqrt(pixelColor.r);
+        // pixelColor.g = sqrt(pixelColor.g);
+        // pixelColor.b = sqrt(pixelColor.b);
 
         pixelColor *= 255.99f;
         pixels[i + frameWidth * (frameHeight - 1 - j)] = SDL_MapRGB(framebuffer->format, pixelColor.x, pixelColor.y, pixelColor.z);

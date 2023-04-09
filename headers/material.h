@@ -39,21 +39,23 @@ class lambertian : public material {
 
 class metal : public material {
   public :
-    metal(color a) {
+    metal(color a, float f) {
       albedo.x = a.x;
       albedo.y = a.y;
       albedo.z = a.z;
+      fuzz = f < 1 ? f : 1;
     }
     
     virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered) override {
       vec3 reflected = reflect(glm::normalize(r_in.getDirection()), rec.normal);
-      scattered = ray(rec.p, reflected);
+      scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
       attenuation = albedo;
-      return (glm::dot(reflected, rec.normal) > 0);
+      return (glm::dot(scattered.getDirection(), rec.normal) > 0);
     }
 
   private:
     color albedo;
+    float fuzz;
 };
 
 
