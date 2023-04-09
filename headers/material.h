@@ -2,9 +2,14 @@
 #include "utils.h"
 #include "ray.h"
 #include "hittable.h"
+#include "texture.h"
 
 class material {
   public: 
+    virtual color emitted(float u, float v, point &p) {
+      return color(0, 0, 0);
+    }
+
     virtual bool scatter(
       ray &r_in, hit_record &rec, color &attenuation, ray& scattered  
     ) = 0;
@@ -13,10 +18,9 @@ class material {
 class lambertian : public material {
   public :
     lambertian(color a) {
-      albedo.x = a.x;
-      albedo.y = a.y;
-      albedo.z = a.z;
+      albedo = make_shared<solid_color>(a);
     }
+    lambertian(shared_ptr<texture> a) : albedo(a) {}
     
     virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered) override {
       vec3 scatter_direction = rec.normal + random_unit_vector();
@@ -24,12 +28,12 @@ class lambertian : public material {
         scatter_direction = rec.normal;
       }
       scattered = ray(rec.p, scatter_direction);
-      attenuation = albedo;
+      attenuation = albedo->value(rec.u, rec.v, rec.p);
       return true;
     }
 
   private:
-    color albedo;
+    shared_ptr<texture> albedo;
 };
 
 
@@ -85,4 +89,21 @@ class dielectric : public material {
       r0 *= r0;
       return r0 + (1 - r0) * (1 - cosine) * (1 - cosine) * (1 - cosine) * (1 - cosine) * (1 - cosine);
     }
+};
+
+class diffuse_light : public material {
+  public:
+    diffuse_light(shared_ptr<texture> a) : emit(a) {}
+    diffuse_light(color c) : emit(make_shared<solid_color> (c)) {}
+
+    virtual bool scatter(ray &r, hit_record &rec, point &p, ray &scattered) override {
+      return false;
+    }
+
+    virtual color emitted(float u, float v, point &p) override {
+      return emit->value(u, v, p);
+    }
+
+  private:
+    shared_ptr<texture> emit;
 };

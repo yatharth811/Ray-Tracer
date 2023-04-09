@@ -9,36 +9,54 @@ inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
   return out << v.x << ' ' << v.y << ' ' << v.z;
 }
 
-color ray_color(ray& r, hittable &world, int depth) {
+color ray_color(ray& r, color &background, hittable &world, int depth) {
 
-  hit_record rec;
+  // hit_record rec;
 
-  if (depth == 0) return color(0, 0, 0);
+  // if (depth == 0) return color(0, 0, 0);
    
-  // if (world.hit(r, 0.001, infinity, rec)) {
-  //   // PART 1.1
-  //   // return 0.5f * (rec.normal + color(1, 1, 1));
+  // // if (world.hit(r, 0.001, infinity, rec)) {
+  // //   // PART 1.1
+  // //   // return 0.5f * (rec.normal + color(1, 1, 1));
 
-  //   point target = rec.p + rec.normal + random_unit_vector();
-  //   ray newRay(rec.p, target - rec.p);
-  //   return 0.5f * ray_color(newRay, world, depth - 1);
+  // //   point target = rec.p + rec.normal + random_unit_vector();
+  // //   ray newRay(rec.p, target - rec.p);
+  // //   return 0.5f * ray_color(newRay, world, depth - 1);
+  // // }
+
+  // if (world.hit(r, 0.0001, infinity, rec)) {
+  //   ray scattered;
+  //   color attenuation;
+    
+  //   if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+  //     return attenuation * ray_color(scattered, world, depth - 1);
+  //   }
+
+  //   return color(0, 0, 0);
+
   // }
 
-  if (world.hit(r, 0.0001, infinity, rec)) {
-    ray scattered;
-    color attenuation;
-    
-    if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-      return attenuation * ray_color(scattered, world, depth - 1);
-    }
+  // vec3 unit_direction = glm::normalize(r.getDirection());
+  // float t = 0.5*(unit_direction.y + 1.0f);
+  // return (1.0f-t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
 
-    return color(0, 0, 0);
+  hit_record rec;
+  if (depth == 0) return color(0, 0, 0);
 
+  if (!world.hit(r, 0.001, infinity, rec)) {
+    return background;
   }
 
-  vec3 unit_direction = glm::normalize(r.getDirection());
-  float t = 0.5*(unit_direction.y + 1.0f);
-  return (1.0f-t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
+  ray scattered;
+  color attenuation;
+  color emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+
+  if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+    return emitted;
+  }
+
+  return  emitted + attenuation * ray_color(scattered, background, world, depth - 1);
+
 }
 
 SDL_Surface* framebuffer = NULL;
@@ -61,8 +79,8 @@ int main() {
   const float aspectRatio = 16.0f/9;
   const int frameWidth = 640;
   const int frameHeight = static_cast<int>(frameWidth / aspectRatio);
-  const int samples = 10;
-  const int max_depth = 5;
+  const int samples = 100;
+  const int max_depth = 50;
 
   // World
   // hittable_list world;
@@ -75,7 +93,7 @@ int main() {
   // auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
   // // metal & diffuse
   // auto material_center = make_shared<lambertian>(color(0.7, 0.3, 0.3));
-  // // auto material_left   = make_shared<metal>(color(0.8, 0.8, 0.8));
+  // auto material_left   = make_shared<metal>(color(0.8, 0.8, 0.8));
   
   // //glass
   // // auto material_center = make_shared<dielectric>(1.5);
@@ -95,22 +113,37 @@ int main() {
   // camera cam(90, aspectRatio);
 
   // Testing New Camera
-  hittable_list world;
+  // hittable_list world;
 
-  auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
+  // auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
   auto material_center = make_shared<lambertian>(color(0.1, 0.2, 0.5));
-  auto material_left   = make_shared<dielectric>(1.5);
-  auto material_right  = make_shared<metal>(color(0.8, 0.6, 0.2));
+  // auto material_left   = make_shared<dielectric>(1.5);
+  // auto material_right  = make_shared<metal>(color(0.8, 0.6, 0.2));
 
-  world.add(make_shared<sphere>(point( 0.0, -100.5, -1.0), 100.0, material_ground));
-  world.add(make_shared<sphere>(point( 0.0,    0.0, -1.0),   0.5, material_center));
-  world.add(make_shared<sphere>(point(-1.0,    0.0, -1.0),   0.5, material_left));
-  world.add(make_shared<sphere>(point(-1.0,    0.0, -1.0), -0.45, material_left));
-  world.add(make_shared<sphere>(point( 1.0,    0.0, -1.0),   0.5, material_right));
+  // world.add(make_shared<sphere>(point( 0.0, -100.5, -1.0), 100.0, material_ground));
+  // world.add(make_shared<sphere>(point( 0.0,    0.0, -1.0),   0.5, material_center));
+  // world.add(make_shared<sphere>(point(-1.0,    0.0, -1.0),   0.5, material_left));
+  // world.add(make_shared<sphere>(point(-1.0,    0.0, -1.0), -0.45, material_left));
+  // world.add(make_shared<sphere>(point( 1.0,    0.0, -1.0),   0.5, material_right));
 
-  camera cam(point(-2,2,1), point(0,0,-1), vec3(0,1,0), 90, aspectRatio);
+  // camera cam(point(-2,2,1), point(0,0,-1), vec3(0,1,0), 90, aspectRatio);
 
   // Test End
+
+  // World
+  hittable_list world;
+  auto difflight = make_shared<diffuse_light> (color(4, 4, 4));
+  world.add(make_shared<sphere>(point(0,-1000,0), 1000, material_center));
+  world.add(make_shared<sphere>(point(0,2,0), 2, material_center));
+  world.add(make_shared<sphere>(point(3.0,    5.0, 0),   1, difflight));
+  world.add(make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
+
+  // Camera specifications
+  point lookfrom(26, 3, 6);
+  point lookat(0, 2, 0);
+  float vfov = 20.0f;
+  color background(0, 0, 0);
+  camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
 
 
 
@@ -140,7 +173,7 @@ int main() {
         auto u = (i + random_in_zo()) * 1.0f / (frameWidth - 1);
         auto v = (j + random_in_zo()) * 1.0f / (frameHeight - 1);
         ray r = cam.get_ray(u, v);
-        pixelColor += ray_color(r, world, 50);
+        pixelColor += ray_color(r, background, world, max_depth);
       }
       pixelColor /= (1.0f * samples);
 

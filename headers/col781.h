@@ -5,5 +5,6 @@
 #include "hittable_list.h" // includes hittable too
 #include "camera.h"
 #include "plane.h"
-#include "box.h"
+// #include "box.h"
 #include "material.h"
+#include "texture.h"
