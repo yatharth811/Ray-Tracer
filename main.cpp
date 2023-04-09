@@ -74,14 +74,42 @@ void handleEvents() {
   }
 }
 
+
+hittable_list cornell_box() {
+    hittable_list objects;
+
+    auto red   = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<box>(point(130, 0, 65), point(295, 165, 230), white));
+    objects.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));
+
+    return objects;
+}
+
 int main() {
 
   // Image Specifications
-  const float aspectRatio = 1.0;
-  const int frameWidth = 600;
-  const int frameHeight = static_cast<int>(frameWidth / aspectRatio);
-  const int samples = 100;
-  const int max_depth = 20;
+  float aspectRatio;
+  int frameWidth;
+  int frameHeight;
+  int samples;
+  int max_depth = 5;
+
+  // World Specifications
+  hittable_list world;
+  point lookfrom;
+  point lookat;
+  float vfov;
+  color background;
 
   // World
   // hittable_list world;
@@ -147,25 +175,43 @@ int main() {
   // camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
 
   // Cornell Box
-  hittable_list world;
-  auto red   = make_shared<lambertian>(color(.65, .05, .05));
-  auto white = make_shared<lambertian>(color(.73, .73, .73));
-  auto green = make_shared<lambertian>(color(.12, .45, .15));
-  auto light = make_shared<diffuse_light>(color(15, 15, 15));
-  world.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
-  world.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
-  world.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
-  world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
-  world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
-  world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
-  point lookfrom(278, 278, -800);
-  point lookat(278, 278, 0);
-  float vfov = 40.0f;
-  color background(0, 0, 0);
+  // hittable_list world;
+  // auto red   = make_shared<lambertian>(color(.65, .05, .05));
+  // auto white = make_shared<lambertian>(color(.73, .73, .73));
+  // auto green = make_shared<lambertian>(color(.12, .45, .15));
+  // auto light = make_shared<diffuse_light>(color(7, 7, 7));
+  // world.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+  // world.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+  // // world.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+  // world.add(make_shared<xz_rect>(113, 443, 127, 432, 554, light));
+  // world.add(make_shared<box>(point(130, 0, 65), point(295, 165, 230), white));
+  // world.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));;
+  // world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+  // world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+  // world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+  // point lookfrom(278, 278, -800);
+  // point lookat(278, 278, 0);
+  // float vfov = 40.0f;
+  // color background(0, 0, 0);
+  // camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
+
+  switch (0) {
+    default:
+    case 1:
+      world = cornell_box();
+      aspectRatio = 1.0f;
+      frameWidth = 600;
+      frameHeight = static_cast<int>(frameWidth / aspectRatio);
+      samples = 100;
+      background = color(0, 0, 0);
+      lookfrom = point(278, 278, -800);
+      lookat = point(278, 278, 0);
+      vfov = 40.0;
+      break;
+  }  
+
+
   camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
-
-
-
 
   // SDL Intialization
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {

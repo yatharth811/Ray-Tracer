@@ -8,25 +8,27 @@
 
 class box: public hittable {
   public:
-    box(glm::vec3 _p1, glm::vec3 _p2);
+    box() {}
+    box(point p0, point p1, shared_ptr<material> ptr);
     virtual bool hit(ray &r, float tmin, float tmax, hit_record &rec) override;
 
   private:
-    glm::vec3 p1,p2;
+    point box_min;
+    point box_max;
     hittable_list rects;
 };
 
-box::box(glm::vec3 _p1, glm::vec3 _p2){
-    p1 = _p1;
-    p2 = _p2;
-    rects.add(make_shared<xy_plane>(p1.x, p1.y, p2.x, p2.y, p2.z));
-    rects.add(make_shared<xy_plane>(p1.x, p1.y, p2.x, p2.y, p1.z));
-    rects.add(make_shared<yz_plane>(p1.y, p1.z, p2.y, p2.z, p2.x));
-    rects.add(make_shared<yz_plane>(p1.y, p1.z, p2.y, p2.z, p1.x));
-    rects.add(make_shared<zx_plane>(p1.z, p1.x, p2.z, p2.x, p1.y));
-    rects.add(make_shared<zx_plane>(p1.z, p1.x, p2.z, p2.x, p2.y));
+box::box(point p0, point p1, shared_ptr<material> ptr){
+    box_min = p0;
+    box_max = p1;
+    rects.add(make_shared<xy_rect>(p0.x, p1.x, p0.y, p1.y, p1.z, ptr));
+    rects.add(make_shared<xy_rect>(p0.x, p1.x, p0.y, p1.y, p0.z, ptr));
+    rects.add(make_shared<xz_rect>(p0.x, p1.x, p0.z, p1.z, p1.y, ptr));
+    rects.add(make_shared<xz_rect>(p0.x, p1.x, p0.z, p1.z, p0.y, ptr));
+    rects.add(make_shared<yz_rect>(p0.y, p1.y, p0.z, p1.z, p1.x, ptr));
+    rects.add(make_shared<yz_rect>(p0.y, p1.y, p0.z, p1.z, p0.x, ptr));
 }
 
 bool box::hit(ray &r, float tmin, float tmax, hit_record &rec){
-    return rects.hit(r,tmin,tmax,rec);
+    return rects.hit(r, tmin, tmax,rec);
 }
