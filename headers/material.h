@@ -3,6 +3,14 @@
 #include "ray.h"
 #include "hittable.h"
 #include "texture.h"
+#include "pdf.h"
+
+struct scatter_record{
+  ray specular_ray;
+  bool is_specular;
+  color attenuation;
+  shared_ptr<pdf> pdf_ptr;
+};
 
 class material {
   public: 
@@ -14,7 +22,11 @@ class material {
     //   ray &r_in, hit_record &rec, color &attenuation, ray& scattered  
     // ) = 0;
 
-    virtual bool scatter (ray &r, hit_record &rec, color &albedo, ray &scattered, float &pdf) {
+    // virtual bool scatter (ray &r, hit_record &rec, color &albedo, ray &scattered, float &pdf) {
+    //   return false;
+    // }
+
+    virtual bool scatter(ray &r, hit_record &ec, scatter_record &srec) {
       return false;
     }
 
@@ -52,14 +64,22 @@ class lambertian : public material {
     }
     lambertian(shared_ptr<texture> a) : albedo(a) {}
     
-    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
-      vec3 scatter_direction = rec.normal + random_unit_vector();
-      if (near_zero(scatter_direction)) {
-        scatter_direction = rec.normal;
-      }
-      scattered = ray(rec.p, glm::normalize(scatter_direction));
-      attenuation = albedo->value(rec.u, rec.v, rec.p);
-      pdf = glm::dot(rec.normal, scattered.getDirection()) / pi;
+    // virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
+    //   vec3 scatter_direction = rec.normal + random_unit_vector();
+    //   if (near_zero(scatter_direction)) {
+    //     scatter_direction = rec.normal;
+    //   }
+    //   scattered = ray(rec.p, glm::normalize(scatter_direction));
+    //   attenuation = albedo->value(rec.u, rec.v, rec.p);
+    //   pdf = glm::dot(rec.normal, scattered.getDirection()) / pi;
+    //   return true;
+    // }
+
+    virtual bool scatter (ray &r, hit_record &rec, scatter_record &srec) {
+      srec.is_specular = false;
+      srec.attenuation = albedo->value(rec.u, rec.v, rec.p);
+      srec.pdf_ptr = make_shared<cosine_pdf> (rec.normal); // maube need to fix this later.
+      // srec.pdf_ptr = new cosine_pdf(rec.normal);
       return true;
     }
 
@@ -84,11 +104,13 @@ class metal : public material {
       fuzz = f < 1 ? f : 1;
     }
     
-    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
+    virtual bool scatter (ray &r_in, hit_record &rec, scatter_record &srec) override {
       vec3 reflected = reflect(glm::normalize(r_in.getDirection()), rec.normal);
-      scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
-      attenuation = albedo;
-      return (glm::dot(scattered.getDirection(), rec.normal) > 0);
+      srec.specular_ray = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
+      srec.attenuation = albedo;
+      srec.is_specular = true;
+      srec.pdf_ptr = 0;
+      return true;
     }
 
   private:
@@ -103,8 +125,11 @@ class dielectric : public material {
       ir = ref_index;
     }
     
-    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
-      attenuation = color(1.0, 1.0, 1.0);
+    virtual bool scatter (ray &r_in, hit_record &rec, scatter_record &srec) override {
+      // attenuation = color(1.0, 1.0, 1.0);
+      srec.is_specular = true;
+      srec.pdf_ptr = nullptr;
+      srec.attenuation = color(1.0, 1.0, 1.0);
       float refraction_ratio = rec.front_face ? 1.0f / ir : ir;
       vec3 unit_direction = glm::normalize(r_in.getDirection());
       float cos_theta = fminf32(glm::dot(-unit_direction, rec.normal), 1.0f);
@@ -116,7 +141,8 @@ class dielectric : public material {
       else {
         direction = refract(unit_direction, rec.normal, refraction_ratio);
       }
-      scattered = ray(rec.p, direction);
+      // scattered = ray(rec.p, direction);
+      srec.specular_ray = ray(rec.p, direction);
       return true;
     }
 
@@ -136,7 +162,7 @@ class diffuse_light : public material {
     diffuse_light(shared_ptr<texture> a) : emit(a) {}
     diffuse_light(color c) : emit(make_shared<solid_color> (c)) {}
 
-    virtual bool scatter(ray &r, hit_record &rec, point &p, ray &scattered, float &pdf) override {
+    virtual bool scatter(ray &r, hit_record &rec, scatter_record &srec) override {
       return false;
     }
 

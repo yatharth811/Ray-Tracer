@@ -63,33 +63,62 @@ inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
 
 // After chapter 3
 
-color ray_color(ray& r, color& background, hittable& world, int depth) {
-    hit_record rec;
+// color ray_color(ray& r, color& background, hittable& world, int depth) {
+//     hit_record rec;
 
-    // If we've exceeded the ray bounce limit, no more light is gathered.
-    if (depth == 0)
-        return color(0,0,0);
+//     // If we've exceeded the ray bounce limit, no more light is gathered.
+//     if (depth == 0)
+//         return color(0,0,0);
 
-    // If the ray hits nothing, return the background color.
-    if (!world.hit(r, 0.001, infinity, rec))
-        return background;
+//     // If the ray hits nothing, return the background color.
+//     if (!world.hit(r, 0.001, infinity, rec))
+//         return background;
 
-    ray scattered;
-    color attenuation;
-    color emitted = rec.mat_ptr->emitted(r, rec, rec.u, rec.v, rec.p);
-    float pdf_val;
-    color albedo;
-    if (!rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf_val))
-        return emitted;
+//     ray scattered;
+//     color attenuation;
+//     color emitted = rec.mat_ptr->emitted(r, rec, rec.u, rec.v, rec.p);
+//     float pdf_val;
+//     color albedo;
+//     if (!rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf_val))
+//         return emitted;
 
-    // Cosine Weighted Sampling
-    cosine_pdf p(rec.normal);
-    scattered = ray(rec.p, p.generate());
-    pdf_val = p.value(scattered.getDirection());
+//     // Cosine Weighted Sampling
+//     cosine_pdf p(rec.normal);
+//     scattered = ray(rec.p, p.generate());
+//     pdf_val = p.value(scattered.getDirection());
     
-    return emitted
-        + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered)
-        * ray_color(scattered, background, world, depth-1) / pdf_val;
+//     return emitted
+//         + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered)
+//         * ray_color(scattered, background, world, depth-1) / pdf_val;
+// }
+
+
+// Final ray_color
+color ray_color(ray &r, color &background, hittable &world, int depth) {
+  if (depth == 0) return color(0, 0, 0);
+
+  hit_record rec;
+  if (!world.hit(r, 0.001, infinity, rec)) {
+    return background;
+  }
+
+  scatter_record srec;
+  color emitted = rec.mat_ptr->emitted(r, rec, rec.u, rec.v, rec.p);
+  if (!rec.mat_ptr->scatter(r, rec, srec)) {
+    return emitted;
+  }
+
+  if (srec.is_specular) {
+    return srec.attenuation
+      * ray_color(srec.specular_ray, background, world, depth-1);
+  }
+
+  cosine_pdf p(rec.normal);
+  ray scattered = ray(rec.p, p.generate());
+  float pdf_val = p.value(scattered.getDirection());
+  return emitted + srec.attenuation * rec.mat_ptr->scattering_pdf(r, rec, scattered) * ray_color(scattered, background, world, depth - 1) / pdf_val;
+
+
 }
 
 
@@ -131,16 +160,25 @@ hittable_list cornell_box() {
     // objects.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));
 
     // Rotated instead.
-    shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(165, 330, 165), white);
+    // shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(165, 330, 165), white);
+    // box1 = make_shared<rotate_y>(box1, 15);
+    // box1 = make_shared<translate>(box1, vec3(265,0,295));
+    // objects.add(box1);
+
+    // shared_ptr<hittable> box2 = make_shared<box>(point(0,0,0), point(165,165,165), white);
+    // box2 = make_shared<rotate_y>(box2, -18);
+    // box2 = make_shared<translate>(box2, vec3(130,0,65));
+    // objects.add(box2);
+
+    // Checking specular
+    shared_ptr<material> aluminum = make_shared<metal>(color(0.8, 0.85, 0.88), 0.0);
+    shared_ptr<hittable> box1 = make_shared<box>(point(0,0,0), point(165,330,165), aluminum);
     box1 = make_shared<rotate_y>(box1, 15);
     box1 = make_shared<translate>(box1, vec3(265,0,295));
     objects.add(box1);
 
-    shared_ptr<hittable> box2 = make_shared<box>(point(0,0,0), point(165,165,165), white);
-    box2 = make_shared<rotate_y>(box2, -18);
-    box2 = make_shared<translate>(box2, vec3(130,0,65));
-    objects.add(box2);
-
+    auto glass = make_shared<dielectric>(1.5);
+    objects.add(make_shared<sphere>(point(190,90,190), 90 , glass));
     return objects;
 }
 
@@ -295,7 +333,7 @@ int main() {
       aspectRatio = 1.0f;
       frameWidth = 600;
       frameHeight = static_cast<int>(frameWidth / aspectRatio);
-      samples = 1000;
+      samples = 2000;
       background = color(0, 0, 0);
       lookfrom = point(278, 278, -800);
       lookat = point(278, 278, 0);
