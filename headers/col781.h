@@ -8,3 +8,4 @@
 #include "box.h"
 #include "material.h"
 #include "texture.h"
+#include "pdf.h"

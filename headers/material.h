@@ -6,14 +6,44 @@
 
 class material {
   public: 
-    virtual color emitted(float u, float v, point &p) {
+    virtual color emitted(ray &r, hit_record &rec, float u, float v, point &p) {
       return color(0, 0, 0);
     }
 
-    virtual bool scatter(
-      ray &r_in, hit_record &rec, color &attenuation, ray& scattered  
-    ) = 0;
+    // virtual bool scatter(
+    //   ray &r_in, hit_record &rec, color &attenuation, ray& scattered  
+    // ) = 0;
+
+    virtual bool scatter (ray &r, hit_record &rec, color &albedo, ray &scattered, float &pdf) {
+      return false;
+    }
+
+    virtual float scattering_pdf(ray &r, hit_record &rec, ray &scattered) {
+      return 0;
+    }
+
 };
+
+// class lambertian : public material {
+//   public :
+//     lambertian(color a) {
+//       albedo = make_shared<solid_color>(a);
+//     }
+//     lambertian(shared_ptr<texture> a) : albedo(a) {}
+    
+//     virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered) override {
+//       vec3 scatter_direction = rec.normal + random_unit_vector();
+//       if (near_zero(scatter_direction)) {
+//         scatter_direction = rec.normal;
+//       }
+//       scattered = ray(rec.p, scatter_direction);
+//       attenuation = albedo->value(rec.u, rec.v, rec.p);
+//       return true;
+//     }
+
+//   private:
+//     shared_ptr<texture> albedo;
+// };
 
 class lambertian : public material {
   public :
@@ -22,19 +52,27 @@ class lambertian : public material {
     }
     lambertian(shared_ptr<texture> a) : albedo(a) {}
     
-    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered) override {
+    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
       vec3 scatter_direction = rec.normal + random_unit_vector();
       if (near_zero(scatter_direction)) {
         scatter_direction = rec.normal;
       }
-      scattered = ray(rec.p, scatter_direction);
+      scattered = ray(rec.p, glm::normalize(scatter_direction));
       attenuation = albedo->value(rec.u, rec.v, rec.p);
+      pdf = glm::dot(rec.normal, scattered.getDirection()) / pi;
       return true;
+    }
+
+    float scattering_pdf(ray &r, hit_record &rec, ray& scattered) override {
+      float cosine = glm::dot(rec.normal, glm::normalize(scattered.getDirection()));
+      return cosine < 0 ? 0 : cosine / pi;
     }
 
   private:
     shared_ptr<texture> albedo;
 };
+
+
 
 
 class metal : public material {
@@ -46,7 +84,7 @@ class metal : public material {
       fuzz = f < 1 ? f : 1;
     }
     
-    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered) override {
+    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
       vec3 reflected = reflect(glm::normalize(r_in.getDirection()), rec.normal);
       scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
       attenuation = albedo;
@@ -65,7 +103,7 @@ class dielectric : public material {
       ir = ref_index;
     }
     
-    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered) override {
+    virtual bool scatter (ray &r_in, hit_record &rec, color &attenuation, ray &scattered, float &pdf) override {
       attenuation = color(1.0, 1.0, 1.0);
       float refraction_ratio = rec.front_face ? 1.0f / ir : ir;
       vec3 unit_direction = glm::normalize(r_in.getDirection());
@@ -98,12 +136,15 @@ class diffuse_light : public material {
     diffuse_light(shared_ptr<texture> a) : emit(a) {}
     diffuse_light(color c) : emit(make_shared<solid_color> (c)) {}
 
-    virtual bool scatter(ray &r, hit_record &rec, point &p, ray &scattered) override {
+    virtual bool scatter(ray &r, hit_record &rec, point &p, ray &scattered, float &pdf) override {
       return false;
     }
 
-    virtual color emitted(float u, float v, point &p) override {
-      return emit->value(u, v, p);
+    virtual color emitted(ray &r, hit_record &rec, float u, float v, point &p) override {
+      if (rec.front_face)
+        return emit->value(u, v, p);
+      else 
+        return color(0, 0, 0);
     }
 
   private:

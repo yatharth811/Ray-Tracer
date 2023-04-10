@@ -85,3 +85,20 @@ class rotate_y : public hittable {
     float sin_theta;
     float cos_theta;
 };
+
+
+class flip_face : public hittable {
+  public:
+    flip_face(shared_ptr<hittable> p) : ptr(p) {}
+
+    virtual bool hit(ray& r, float tmin, float tmax, hit_record& rec) override {
+      if (!ptr->hit(r, tmin, tmax, rec))
+          return false;
+
+      rec.front_face = !rec.front_face;
+      return true;
+    }
+
+  public:
+    shared_ptr<hittable> ptr;
+};
