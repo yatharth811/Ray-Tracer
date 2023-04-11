@@ -9,3 +9,4 @@
 #include "material.h"
 #include "texture.h"
 #include "pdf.h"
+#include "pointlight.h"

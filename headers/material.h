@@ -176,3 +176,20 @@ class diffuse_light : public material {
   private:
     shared_ptr<texture> emit;
 };
+
+// class point_light : public material {
+//   public:
+//     point_light(shared_ptr<texture> a) : emit(a) {}
+//     point_light(color c) : emit(make_shared<solid_color> (c)) {}
+
+//     virtual bool scatter(ray &r, hit_record &rec, scatter_record &srec) override {
+//       return false;
+//     }
+
+//     virtual color emitted(ray &r, hit_record &rec, float u, float v, point &p) override {
+//       return emit->value(u, v, p);
+//     }
+
+//   private:
+//     shared_ptr<texture> emit;
+// };
