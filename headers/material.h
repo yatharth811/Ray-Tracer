@@ -106,7 +106,8 @@ class metal : public material {
     
     virtual bool scatter (ray &r_in, hit_record &rec, scatter_record &srec) override {
       vec3 reflected = reflect(glm::normalize(r_in.getDirection()), rec.normal);
-      srec.specular_ray = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
+      // srec.specular_ray = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
+      srec.specular_ray = ray(rec.p, reflected);
       srec.attenuation = albedo;
       srec.is_specular = true;
       srec.pdf_ptr = 0;

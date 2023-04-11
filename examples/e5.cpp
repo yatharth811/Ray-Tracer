@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <glm/glm.hpp>
-#include "headers/col781.h"
+#include "../headers/col781.h"
 #include <omp.h>
 using namespace std;
 
@@ -10,7 +10,6 @@ inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
   return out << v.x << ' ' << v.y << ' ' << v.z;
 }
 
-// Final ray_color
 color ray_color(ray &r, color &background, hittable &world, int depth) {
   if (depth == 0) return color(0, 0, 0);
 
@@ -100,9 +99,6 @@ hittable_list cornell_box() {
 }
 
 hittable_list final_scene() {
-  static std::uniform_real_distribution<float> distribution(1, 101);
-  static std::mt19937 generator;
-
   // hittable_list boxes1;
   hittable_list objects;
   auto ground = make_shared<lambertian>(color(0.48, 0.83, 0.53));
@@ -114,7 +110,7 @@ hittable_list final_scene() {
       auto z0 = -1000.0 + j*w;
       auto y0 = 0.0;
       auto x1 = x0 + w;
-      auto y1 = distribution(generator);
+      auto y1 = random_float(1,101);
       auto z1 = z0 + w;
       objects.add(make_shared<box>(point(x0,y0,z0), point(x1,y1,z1), ground));
     }
@@ -163,13 +159,13 @@ int main() {
   float vfov;
   color background;
 
-  switch (2) {
+  switch (1) {
     case 1:
       world = cornell_box();
       aspectRatio = 1.0f;
       frameWidth = 600;
       frameHeight = static_cast<int>(frameWidth / aspectRatio);
-      samples = 2000;
+      samples = 500;
       background = color(0, 0, 0);
       lookfrom = point(278, 278, -800);
       lookat = point(278, 278, 0);
@@ -182,7 +178,7 @@ int main() {
       aspectRatio = 1.0;
       frameWidth = 800;
       frameHeight = static_cast<int>(frameWidth / aspectRatio);
-      samples = 1000;
+      samples = 500;
       background = color(0,0,0);
       lookfrom = point(478, 278, -600);
       lookat = point(278, 278, 0);
@@ -227,9 +223,9 @@ int main() {
         pixelColor /= (1.0f * samples);
 
         // Gamma Correction
-        pixelColor.r = sqrt(pixelColor.r);
-        pixelColor.g = sqrt(pixelColor.g);
-        pixelColor.b = sqrt(pixelColor.b);
+        // pixelColor.r = sqrt(pixelColor.r);
+        // pixelColor.g = sqrt(pixelColor.g);
+        // pixelColor.b = sqrt(pixelColor.b);
 
         pixelColor *= 255.99f;
         pixels[i + frameWidth * (frameHeight - 1 - j)] = SDL_MapRGB(framebuffer->format, pixelColor.x, pixelColor.y, pixelColor.z);

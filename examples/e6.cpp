@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <glm/glm.hpp>
-#include "headers/col781.h"
+#include "../headers/col781.h"
 #include <omp.h>
 using namespace std;
 
@@ -10,13 +10,15 @@ inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
   return out << v.x << ' ' << v.y << ' ' << v.z;
 }
 
-// Final ray_color
+
+
+// // Final ray_color
 color ray_color(ray &r, color &background, hittable &world, int depth) {
   if (depth == 0) return color(0, 0, 0);
 
   hit_record rec;
   if (!world.hit(r, 0.001, infinity, rec)) {
-    return background;
+      return color(0.5f, 0.7f, 1.0f);
   }
 
   scatter_record srec;
@@ -37,6 +39,27 @@ color ray_color(ray &r, color &background, hittable &world, int depth) {
 
 
 }
+
+// color ray_color(ray& r, color &background,  hittable& world, int depth) {
+//     hit_record rec;
+
+//     // If we've exceeded the ray bounce limit, no more light is gathered.
+//     if (depth <= 0)
+//         return color(0,0,0);
+
+//     if (world.hit(r, 0.001, infinity, rec)) {
+//         // ray scattered;
+//         // color attenuation;
+//         scatter_record srec;
+//         if (rec.mat_ptr->scatter(r, rec, srec))
+//             return srec.attenuation * ray_color(srec.specular_ray, background, world, depth-1);
+//         return color(0,0,0);
+//     }
+    
+//     vec3 unit_direction = glm::normalize(r.getDirection());
+//     float t = 0.5*(unit_direction.y + 1.0);
+//     return (1.0f-t )*color(1.0, 1.0, 1.0) + t*color(0.5, 0.7, 1.0);
+// }
 
 
 SDL_Surface* framebuffer = NULL;
@@ -77,32 +100,25 @@ hittable_list cornell_box() {
     // objects.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));
 
     // Rotated instead.
-    // shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(165, 330, 165), white);
-    // box1 = make_shared<rotate_y>(box1, 15);
-    // box1 = make_shared<translate>(box1, vec3(265,0,295));
-    // objects.add(box1);
-
-    // shared_ptr<hittable> box2 = make_shared<box>(point(0,0,0), point(165,165,165), white);
-    // box2 = make_shared<rotate_y>(box2, -18);
-    // box2 = make_shared<translate>(box2, vec3(130,0,65));
-    // objects.add(box2);
-
-    // Checking specular
-    shared_ptr<material> aluminum = make_shared<metal>(color(0.8, 0.85, 0.88), 0.0);
-    shared_ptr<hittable> box1 = make_shared<box>(point(0,0,0), point(165,330,165), aluminum);
+    shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(165, 330, 165), white);
     box1 = make_shared<rotate_y>(box1, 15);
     box1 = make_shared<translate>(box1, vec3(265,0,295));
     objects.add(box1);
 
-    auto glass = make_shared<dielectric>(1.5);
-    objects.add(make_shared<sphere>(point(190,90,190), 90 , glass));
+    shared_ptr<hittable> box2 = make_shared<box>(point(0,0,0), point(165,165,165), white);
+    box2 = make_shared<rotate_y>(box2, -18);
+    box2 = make_shared<translate>(box2, vec3(130,0,65));
+    objects.add(box2);
+
+    // Checking specular
+    
+
+    // auto glass = make_shared<dielectric>(1.5);
+    // objects.add(make_shared<sphere>(point(190,90,190), 90 , glass));
     return objects;
 }
 
 hittable_list final_scene() {
-  static std::uniform_real_distribution<float> distribution(1, 101);
-  static std::mt19937 generator;
-
   // hittable_list boxes1;
   hittable_list objects;
   auto ground = make_shared<lambertian>(color(0.48, 0.83, 0.53));
@@ -114,7 +130,7 @@ hittable_list final_scene() {
       auto z0 = -1000.0 + j*w;
       auto y0 = 0.0;
       auto x1 = x0 + w;
-      auto y1 = distribution(generator);
+      auto y1 = random_float(1,101);
       auto z1 = z0 + w;
       objects.add(make_shared<box>(point(x0,y0,z0), point(x1,y1,z1), ground));
     }
@@ -163,33 +179,30 @@ int main() {
   float vfov;
   color background;
 
-  switch (2) {
-    case 1:
-      world = cornell_box();
-      aspectRatio = 1.0f;
-      frameWidth = 600;
-      frameHeight = static_cast<int>(frameWidth / aspectRatio);
-      samples = 2000;
-      background = color(0, 0, 0);
-      lookfrom = point(278, 278, -800);
-      lookat = point(278, 278, 0);
-      vfov = 40.0;
-      break;
+  auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
+  auto material_center = make_shared<lambertian>(color(0.7, 0.3, 0.3));
+  // auto material_left   = make_shared<metal>(color(0.8, 0.8, 0.8), 1);
+  auto material_right  = make_shared<metal>(color(0.8, 0.6, 0.2), 1);
 
-    default:
-    case 2:
-      world = final_scene();
-      aspectRatio = 1.0;
-      frameWidth = 800;
-      frameHeight = static_cast<int>(frameWidth / aspectRatio);
-      samples = 1000;
-      background = color(0,0,0);
-      lookfrom = point(478, 278, -600);
-      lookat = point(278, 278, 0);
-      vfov = 40.0;
-      break;
-  }  
+  world.add(make_shared<sphere>(point( 0.0, -100.5, -1.0), 100.0, material_ground));
+  world.add(make_shared<sphere>(point( 0.0,    0.0, -1.0),   0.5, material_center));
+  world.add(make_shared<sphere>(point( 1.0,    0.0, -1.0),   0.5, material_right));
 
+  auto glass = make_shared<dielectric>(1.5);
+  world.add(make_shared<sphere>(point(-1, 0, -1), 0.5, glass));
+
+
+  // auto light = make_shared<diffuse_light>(color(3, 3, 3));
+  // world.add((make_shared<sphere>(point(50, 1000, -1.0), 500, light)));
+
+  aspectRatio = 16.0f/9;
+  frameWidth = 640;
+  frameHeight = static_cast<int> (frameWidth / aspectRatio);
+  samples = 100;
+  background = color(0, 0, 0);
+  lookfrom = point(-2, 2, 1);
+  lookat = point(0, 0, -1);
+  vfov = 50.0f;
 
   camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
 

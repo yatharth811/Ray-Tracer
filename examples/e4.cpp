@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include "../headers/col781.h"
 #include <omp.h>
+#include <cstdlib>
 using namespace std;
 
 inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
@@ -11,11 +12,15 @@ inline std::ostream& operator<<(std::ostream &out, const vec3 &v) {
 }
 
 
-
+float prob = 0.8f;
 // Final ray_color
 color ray_color(ray &r, color &background, hittable &world, int depth) {
   if (depth == 0) return color(0, 0, 0);
-
+  // std::srand(std::time(nullptr));
+  float rand_num = ((float) rand() / (RAND_MAX));
+  if(rand_num>prob){
+    return color(0,0,0);
+  }
   hit_record rec;
   if (!world.hit(r, 0.001, infinity, rec)) {
     return background;
@@ -35,7 +40,7 @@ color ray_color(ray &r, color &background, hittable &world, int depth) {
   cosine_pdf p(rec.normal);
   ray scattered = ray(rec.p, p.generate());
   float pdf_val = p.value(scattered.getDirection());
-  return emitted + srec.attenuation * rec.mat_ptr->scattering_pdf(r, rec, scattered) * ray_color(scattered, background, world, depth - 1) / pdf_val;
+  return emitted + srec.attenuation * rec.mat_ptr->scattering_pdf(r, rec, scattered) * ray_color(scattered, background, world, depth - 1) / (pdf_val*prob);
 
 
 }
@@ -64,36 +69,44 @@ hittable_list cornell_box() {
     auto green = make_shared<lambertian>(color(.12, .45, .15));
     auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
-    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
-    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    // objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    // objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
     // 2 sided light
     // objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
 
     // unidirectional light
     objects.add(make_shared<flip_face>(make_shared<xz_rect>(213, 343, 227, 332, 554, light)));
 
-    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
-    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
-    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xz_rect>(-1000, 1000, -1000, 1000, 0, green));
+    // objects.add(make_shared<xz_rect>(-1000, -1000, 1000, 1000, 0, green));
+
+    // objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    // objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
     // objects.add(make_shared<box>(point(130, 0, 65), point(295, 165, 230), white));
     // objects.add(make_shared<box>(point(265, 0, 295), point(430, 330, 460), white));
 
     // Rotated instead.
-    shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(165, 330, 165), white);
+    shared_ptr<hittable> box1 = make_shared<box>(point(0, 0, 0), point(160, 160, 160), white);
     box1 = make_shared<rotate_y>(box1, 15);
-    box1 = make_shared<translate>(box1, vec3(265,0,295));
+    // box1 = make_shared<translate>(box1, vec3(265,0,295));
+    box1 = make_shared<translate>(box1, vec3(400,0,400));
+
     objects.add(box1);
 
     shared_ptr<hittable> box2 = make_shared<box>(point(0,0,0), point(165,165,165), white);
     box2 = make_shared<rotate_y>(box2, -18);
-    box2 = make_shared<translate>(box2, vec3(130,0,65));
+    // box2 = make_shared<translate>(box2, vec3(130,0,65));
+    box2 = make_shared<translate>(box2, vec3(0,0,100));
+
     objects.add(box2);
 
     // Checking specular
     
 
     auto glass = make_shared<dielectric>(1.5);
-    objects.add(make_shared<sphere>(point(190,90,190), 90 , glass));
+    // objects.add(make_shared<sphere>(point(190,90,190), 90 , white));
+    objects.add(make_shared<sphere>(point(250,120,220), 90 , white));
+
     return objects;
 }
 
@@ -163,27 +176,28 @@ int main() {
   auto material_left   = make_shared<metal>(color(0.8, 0.8, 0.8), 1);
   auto material_right  = make_shared<metal>(color(0.8, 0.6, 0.2), 1);
 
-  world.add(make_shared<sphere>(point( 0.0, -100.5, -1.0), 100.0, material_ground));
+  // world.add(make_shared<sphere>(point( 0.0, -100.5, -1.0), 100.0, material_ground));
   // world.add(make_shared<sphere>(point( 0.0,    0.0, -1.0),   0.5, material_center));
-  shared_ptr<hittable> box1 = make_shared<box>(point(-0.5, -0.5, -2), point(0.5, 0.5, -10.0), material_center);
-  // box1 = make_shared<translate>(box1, vec3(0.0,0,6.0));
-  // box1 = make_shared<rotate_y>(box1, 35);
-  // box1 = make_shared<translate>(box1, vec3(0.0,0,-6.0));
-  world.add(box1);
+  // shared_ptr<hittable> box1 = make_shared<box>(point(-0.5*5, -0.5*5, -2*5), point(0.5*5, 0.5*5, -10.0*5), material_center);
+  // // box1 = make_shared<translate>(box1, vec3(0.0,0,6.0));
+  // // box1 = make_shared<rotate_y>(box1, -12);
+  // // box1 = make_shared<translate>(box1, vec3(-0.5,0,0.0));
+  // world.add(box1);
 
-  world.add(make_shared<sphere>(point(-1.0,    0.0, -1.0),   0.5, material_left));
-  world.add(make_shared<sphere>(point( 1.0,    0.0, -1.0),   0.5, material_right));
-  auto light = make_shared<diffuse_light>(color(3, 3, 3));
-  world.add((make_shared<sphere>(point(100, 100, 1000), 500, light)));
+  // world.add(make_shared<sphere>(point(-5.0,    0.0, -5.0),   2.5, material_left));
+  // world.add(make_shared<sphere>(point( 5.0,    0.0, -5.0),   2.5, material_right));
+  // auto light = make_shared<diffuse_light>(color(3, 3, 3));
+  // world.add((make_shared<sphere>(point(100, 100, 1000), 500, light)));
 
-  aspectRatio = 16.0f/9;
+  world = cornell_box();
+  aspectRatio = 1.0f;
   frameWidth = 640;
   frameHeight = static_cast<int> (frameWidth / aspectRatio);
-  samples = 100;
+  samples = 1000;
   background = color(0, 0, 0);
-  lookfrom = point(0, 0, 0);
-  lookat = point(0, 0, -1);
-  vfov = 90.0f;
+  lookfrom = point(278, 278, -800);
+  lookat = point(278, 278, 0);
+  vfov = 40.0;
 
   camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, aspectRatio);
 
